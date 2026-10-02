@@ -2,7 +2,6 @@
 <html lang="bn">
 <head>
 <meta charset="UTF-8">
-<link rel="icon" href="icon.png">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#0a0a0a">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -86,17 +85,14 @@
   .track-row .play-icon { display: none; }
   .track-row:hover .track-num span { display: none; }
   .track-row:hover .play-icon { display: block; margin: 0 auto; }
-  .track-art {
-    width: 44px; height: 44px; border-radius: 4px;
-    background: #282828; object-fit: cover;
-    display: block;
-  }
+  .track-art { width: 44px; height: 44px; border-radius: 4px; background: #282828; object-fit: cover; display: block; }
   .track-info { min-width: 0; }
   .track-title { font-size: 0.95rem; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .track-artist { font-size: 0.8rem; color: var(--text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .track-dur { color: var(--text-dim); font-size: 0.85rem; text-align: right; }
   .badge { display: inline-block; font-size: 0.65rem; padding: 2px 6px; border-radius: 3px; margin-left: 6px; vertical-align: middle; font-weight: 700; }
   .badge.yt { background: var(--yt); color: #fff; }
+  .badge.bg { background: #0288d1; color: #fff; }
   .badge.audius { background: var(--accent); color: #000; }
   .empty, .loading { text-align: center; color: var(--text-dim); padding: 3rem 1rem; font-size: 0.95rem; }
 
@@ -108,27 +104,18 @@
     padding-bottom: env(safe-area-inset-bottom); gap: 1rem;
   }
   .now-playing { display: flex; align-items: center; gap: 0.8rem; min-width: 0; }
-
-  /* artwork slot — ভাঙা আইকন এড়াতে background দিয়ে placeholder */
   .np-art-slot {
     position: relative; width: 56px; height: 56px;
     border-radius: 4px; overflow: hidden;
     background: #282828 url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='56'%3E%3Ctext x='28' y='38' font-size='24' text-anchor='middle' fill='%23666'%3E%E2%99%AA%3C/text%3E%3C/svg%3E") center/cover no-repeat;
     flex-shrink: 0;
   }
-  .np-art-slot img {
-    width: 100%; height: 100%;
-    object-fit: cover; display: block;
-    position: relative; z-index: 1;
-  }
-  .np-art-slot img[data-hidden="1"] { display: none; }
+  .np-art-slot img { width: 100%; height: 100%; object-fit: cover; display: block; position: relative; z-index: 1; }
   #ytWrap { position: absolute; inset: 0; display: none; z-index: 2; background: #000; }
   #ytWrap iframe { width: 100% !important; height: 100% !important; display: block; border: 0; }
-
   .now-playing .np-info { min-width: 0; }
   .now-playing .np-title { font-size: 0.9rem; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .now-playing .np-artist { font-size: 0.75rem; color: var(--text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-
   .player-center { display: flex; flex-direction: column; align-items: center; gap: 0.4rem; }
   .controls { display: flex; align-items: center; gap: 1rem; }
   .ctrl-btn { background: none; border: none; color: var(--text-dim); cursor: pointer; padding: 0.4rem; display: grid; place-items: center; transition: color 0.15s; }
@@ -148,34 +135,55 @@
   .overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 99; }
   .overlay.show { display: block; }
 
-  @media (max-width: 768px) {
-    body { grid-template-columns: 1fr; grid-template-rows: 1fr auto; grid-template-areas: "main" "player"; }
-    .sidebar { position: fixed; top: 0; left: -260px; width: 240px; height: 100dvh; z-index: 100; transition: left 0.3s cubic-bezier(0.4,0,0.2,1); padding-top: max(1.5rem, env(safe-area-inset-top)); }
-    .sidebar.open { left: 0; }
-    .hamburger { display: block; }
-    .main { padding: 1rem; padding-top: max(0.75rem, env(safe-area-inset-top)); }
-    .topbar { top: -0.75rem; margin-top: -0.75rem; padding: 0.75rem 0; }
-    .section-title { font-size: 1.3rem; }
-    .track-row { grid-template-columns: 30px 44px 1fr 50px; gap: 0.75rem; padding: 0.5rem; }
-    .track-art { width: 40px; height: 40px; }
-    .player { grid-template-columns: 1fr auto; grid-template-rows: auto auto; grid-template-areas: "now controls" "progress progress"; padding: 0.6rem 0.75rem; padding-bottom: max(0.6rem, env(safe-area-inset-bottom)); gap: 0.5rem; }
-    .now-playing { grid-area: now; }
-    .np-art-slot { width: 44px; height: 44px; }
-    .now-playing .np-title { font-size: 0.85rem; }
-    .now-playing .np-artist { font-size: 0.7rem; }
-    .player-center { grid-area: controls; display: block; }
-    .controls { gap: 0.6rem; }
-    .ctrl-btn svg { width: 22px; height: 22px; }
-    .play-btn { width: 40px; height: 40px; }
-    .player-right { display: none; }
-    .progress-row { grid-area: progress; max-width: none; gap: 0.5rem; }
-    .time { font-size: 0.65rem; min-width: 30px; }
+  /* ব্যাকগ্রাউন্ড মোড ইন্ডিকেটর */
+  .bg-indicator {
+    position: fixed; top: 12px; right: 12px;
+    background: #0288d1; color: #fff;
+    padding: 6px 12px; border-radius: 20px;
+    font-size: 0.75rem; font-weight: 700;
+    z-index: 200; display: none;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+    animation: fadeIn 0.4s;
   }
+  .bg-indicator.show { display: flex; align-items: center; gap: 6px; }
+  .bg-indicator.fg { background: #f57c00; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+
+  body.mobile-ui {
+    grid-template-columns: 1fr; grid-template-rows: 1fr auto;
+    grid-template-areas: "main" "player";
+  }
+  body.mobile-ui .sidebar { position: fixed; top: 0; left: -260px; width: 240px; height: 100dvh; z-index: 100; transition: left 0.3s cubic-bezier(0.4,0,0.2,1); padding-top: max(1.5rem, env(safe-area-inset-top)); }
+  body.mobile-ui .sidebar.open { left: 0; }
+  body.mobile-ui .hamburger { display: block; }
+  body.mobile-ui .main { padding: 1rem; padding-top: max(0.75rem, env(safe-area-inset-top)); }
+  body.mobile-ui .topbar { top: -0.75rem; margin-top: -0.75rem; padding: 0.75rem 0; }
+  body.mobile-ui .section-title { font-size: 1.3rem; }
+  body.mobile-ui .track-row { grid-template-columns: 30px 44px 1fr 50px; gap: 0.75rem; padding: 0.5rem; }
+  body.mobile-ui .track-art { width: 40px; height: 40px; }
+  body.mobile-ui .player { grid-template-columns: 1fr auto; grid-template-rows: auto auto; grid-template-areas: "now controls" "progress progress"; padding: 0.6rem 0.75rem; padding-bottom: max(0.6rem, env(safe-area-inset-bottom)); gap: 0.5rem; }
+  body.mobile-ui .now-playing { grid-area: now; }
+  body.mobile-ui .np-art-slot { width: 44px; height: 44px; }
+  body.mobile-ui .now-playing .np-title { font-size: 0.85rem; }
+  body.mobile-ui .now-playing .np-artist { font-size: 0.7rem; }
+  body.mobile-ui .player-center { grid-area: controls; display: block; }
+  body.mobile-ui .controls { gap: 0.6rem; }
+  body.mobile-ui .ctrl-btn svg { width: 22px; height: 22px; }
+  body.mobile-ui .play-btn { width: 40px; height: 40px; }
+  body.mobile-ui .player-right { display: none; }
+  body.mobile-ui .progress-row { grid-area: progress; max-width: none; gap: 0.5rem; }
+  body.mobile-ui .time { font-size: 0.65rem; min-width: 30px; }
 </style>
 </head>
 <body>
 
 <div class="overlay" id="overlay" onclick="closeSidebar()"></div>
+
+<!-- ব্যাকগ্রাউন্ড ইন্ডিকেটর -->
+<div class="bg-indicator" id="bgIndicator">
+  <span id="bgIcon">🔊</span>
+  <span id="bgText">ব্যাকগ্রাউন্ড মোড</span>
+</div>
 
 <aside class="sidebar" id="sidebar">
   <div class="logo"><div class="dot">♪</div>Amar Music</div>
@@ -258,6 +266,20 @@ const AUDIUS_API = 'https://discoveryprovider.audius.co/v1';
 const YOUTUBE_KEY = 'AIzaSyBYMKWcyx0YYvLlJQj2MBKeWQBH-oqxYg4';
 const HEADERS = { 'x-api-key': AUDIUS_KEY };
 
+// ইনভিডিয়াস ইনস্ট্যান্স — অডিও স্ট্রিম প্রক্সির জন্য
+// একটা কাজ না করলে পরেরটা চেষ্টা করবে
+const INVIDIOUS_INSTANCES = [
+  'https://inv.nadeko.net',
+  'https://invidious.nerdvpn.de',
+  'https://invidious.f5.si',
+  'https://yewtu.be',
+  'https://iv.melmac.space',
+  'https://invidious.privacyredirect.com'
+];
+
+/* ============================================================
+   স্টেট
+============================================================ */
 let queue = [];
 let currentIndex = -1;
 let isMuted = false;
@@ -265,26 +287,35 @@ let lastVolume = 0.8;
 let ytPlayer = null;
 let ytReady = false;
 let ytScriptLoaded = false;
+let currentPlayMode = 'idle'; // 'audius' | 'yt-audio' | 'yt-iframe' | 'idle'
 
 const audio = document.getElementById('audio');
 audio.volume = lastVolume;
 
 /* ============================================================
-   Placeholder (নিরাপদে encode করা)
+   মোবাইল UI ডিটেকশন (Desktop site চালু থাকলেও কাজ করবে)
+============================================================ */
+function applyMobileUI() {
+  const ua = navigator.userAgent || '';
+  const isMobileUA = /Android|iPhone|iPad|iPod|Mobile|webOS|BlackBerry|IEMobile|Opera Mini/i.test(ua);
+  const isTouchSmall = (navigator.maxTouchPoints > 1) && (Math.min(window.innerWidth, screen.width) < 1024);
+  document.body.classList.toggle('mobile-ui', isMobileUA || isTouchSmall);
+}
+applyMobileUI();
+window.addEventListener('resize', applyMobileUI);
+window.addEventListener('orientationchange', applyMobileUI);
+
+/* ============================================================
+   Placeholder
 ============================================================ */
 function placeholderArt() {
-  const svg =
-    '<svg xmlns="http://www.w3.org/2000/svg" width="150" height="150">' +
+  const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="150" height="150">' +
     '<rect width="150" height="150" fill="#282828"/>' +
-    '<text x="75" y="92" font-size="52" text-anchor="middle" fill="#666" font-family="sans-serif">♪</text>' +
-    '</svg>';
+    '<text x="75" y="92" font-size="52" text-anchor="middle" fill="#666" font-family="sans-serif">♪</text></svg>';
   return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
 }
 const PLACEHOLDER = placeholderArt();
 
-/* ============================================================
-   যেকোনো <img> লোড ফেল করলে placeholder বসাও (গ্লোবাল)
-============================================================ */
 document.addEventListener('error', (e) => {
   const el = e.target;
   if (el && el.tagName === 'IMG' && el.dataset.fb !== '1') {
@@ -305,8 +336,7 @@ const manifestData = {
       '<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512">' +
       '<rect width="512" height="512" fill="#0a0a0a"/>' +
       '<circle cx="256" cy="256" r="180" fill="#1db954"/>' +
-      '<text x="256" y="330" font-size="220" text-anchor="middle" fill="white" font-family="sans-serif">♪</text>' +
-      '</svg>'
+      '<text x="256" y="330" font-size="220" text-anchor="middle" fill="white" font-family="sans-serif">♪</text></svg>'
     ),
     sizes: '512x512', type: 'image/svg+xml', purpose: 'any maskable'
   }]
@@ -336,7 +366,7 @@ async function searchAudius(q) {
       thumb: t.artwork ? t.artwork['150x150'] : PLACEHOLDER,
       duration: t.duration || 0
     }));
-  } catch (e) { console.warn('Audius search failed', e); return []; }
+  } catch (e) { return []; }
 }
 
 async function searchYouTube(q) {
@@ -361,7 +391,50 @@ async function searchYouTube(q) {
     }));
     try { sessionStorage.setItem(cacheKey, JSON.stringify(items)); } catch(e) {}
     return items;
-  } catch (e) { console.warn('YT search failed', e); return []; }
+  } catch (e) { return []; }
+}
+
+/* ============================================================
+   🔑 YouTube অডিও স্ট্রিম URL — Invidious দিয়ে
+   এটাই ব্যাকগ্রাউন্ড প্লেব্যাকের মূল চাবি
+============================================================ */
+async function getYouTubeAudioUrl(videoId) {
+  // ক্যাশ চেক — একই ভিডিওর জন্য বারবার অনুরোধ না করতে
+  const cacheKey = 'yta_' + videoId;
+  const cached = sessionStorage.getItem(cacheKey);
+  if (cached) return cached;
+
+  // প্রতিটি ইনস্ট্যান্স চেষ্টা করি
+  for (const inst of INVIDIOUS_INSTANCES) {
+    try {
+      // itag=140 হলো 128kbps M4A অডিও, local=true দিলে সার্ভার প্রক্সি করে
+      // ফলে ব্রাউজার থেকে সরাসরি স্ট্রিম করা যায়
+      const url = `${inst}/latest_version?id=${videoId}&itag=140&local=true`;
+
+      // HEAD রিকোয়েস্ট দিয়ে দেখি URL কাজ করে কি না
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 6000);
+
+      const res = await fetch(url, {
+        method: 'GET',
+        signal: controller.signal,
+        // শুধু হেডার চাই, বডি না
+        headers: { 'Range': 'bytes=0-100' }
+      });
+      clearTimeout(timeoutId);
+
+      if (res.ok || res.status === 206) {
+        // এই URL কাজ করছে
+        sessionStorage.setItem(cacheKey, url);
+        console.log('[BG Audio] Working instance:', inst);
+        return url;
+      }
+    } catch (e) {
+      console.log('[BG Audio] Instance failed:', inst, e.message);
+      continue;
+    }
+  }
+  return null;
 }
 
 /* ============================================================
@@ -380,9 +453,7 @@ async function loadTrending() {
       duration: t.duration || 0
     }));
     renderTracks(tracks);
-  } catch (e) {
-    setContent('<div class="empty">গান লোড করা যায়নি।</div>');
-  }
+  } catch (e) { setContent('<div class="empty">গান লোড করা যায়নি।</div>'); }
 }
 
 async function loadFeatured() {
@@ -436,14 +507,13 @@ function renderTracks(tracks) {
     const badge = t.source === 'youtube'
       ? '<span class="badge yt">YT</span>'
       : '<span class="badge audius">A</span>';
-    const thumb = t.thumb || PLACEHOLDER;
     return `
       <div class="track-row" data-index="${i}" onclick="playAt(${i})">
         <div class="track-num">
           <span>${i + 1}</span>
           <svg class="play-icon" viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
         </div>
-        <img class="track-art" src="${thumb}" alt="" loading="lazy">
+        <img class="track-art" src="${t.thumb || PLACEHOLDER}" alt="" loading="lazy">
         <div class="track-info">
           <div class="track-title">${escapeHtml(t.title)}${badge}</div>
           <div class="track-artist">${escapeHtml(t.artist)}</div>
@@ -461,7 +531,7 @@ function showQueue() {
 }
 
 /* ============================================================
-   প্লেব্যাক
+   🎯 প্লেব্যাক — মূল পরিবর্তন এখানে
 ============================================================ */
 async function playAt(index) {
   if (index < 0 || index >= queue.length) return;
@@ -471,50 +541,70 @@ async function playAt(index) {
   document.getElementById('npTitle').textContent = t.title;
   document.getElementById('npArtist').textContent = t.artist;
 
+  // আগের প্লেব্যাক বন্ধ
+  try { audio.pause(); } catch(e) {}
+  if (ytPlayer && ytReady) { try { ytPlayer.stopVideo(); } catch(e) {} }
+
   if (t.source === 'audius') {
+    // ===== অডিয়াস =====
     hideYT();
     const npArt = document.getElementById('npArt');
     npArt.dataset.fb = '';
     npArt.src = t.artwork || PLACEHOLDER;
     npArt.style.display = 'block';
 
-    if (ytPlayer && ytReady) { try { ytPlayer.stopVideo(); } catch(e){} }
-
     audio.src = `${AUDIUS_API}/tracks/${t.id}/stream?app_name=${APP_NAME}`;
     try { await audio.play(); } catch (e) { console.warn('Audius play failed:', e); }
+    currentPlayMode = 'audius';
     updateMediaSession(t);
+    showBgIndicator('background', 'ব্যাকগ্রাউন্ড চালু');
   } else {
-    audio.pause();
-    try { audio.removeAttribute('src'); audio.load(); } catch(e) {}
-    document.getElementById('npArt').style.display = 'none';
-    await playYouTube(t.id, t.artwork); // pass artwork for fallback
+    // ===== YouTube =====
+    // প্রথমে চেষ্টা: সরাসরি অডিও স্ট্রিম (ব্যাকগ্রাউন্ড চালু হবে)
+    document.getElementById('npTitle').textContent = t.title + ' (লোড হচ্ছে...)';
+
+    const audioUrl = await getYouTubeAudioUrl(t.id);
+
+    if (audioUrl) {
+      // ✅ সরাসরি অডিও — ব্যাকগ্রাউন্ডে চলবে!
+      hideYT();
+      const npArt = document.getElementById('npArt');
+      npArt.dataset.fb = '';
+      npArt.src = t.artwork || PLACEHOLDER;
+      npArt.style.display = 'block';
+
+      audio.src = audioUrl;
+      try {
+        await audio.play();
+        currentPlayMode = 'yt-audio';
+        updateMediaSession(t);
+        showBgIndicator('background', 'ব্যাকগ্রাউন্ড চালু');
+        document.getElementById('npTitle').textContent = t.title;
+      } catch (e) {
+        console.warn('YT direct audio failed, falling back to iframe:', e);
+        // ফেল করলে iframe-এ যাই
+        await playYouTubeIframe(t);
+      }
+    } else {
+      // ❌ সরাসরি অডিও পাওয়া যায়নি — iframe ফলব্যাক
+      console.log('[BG Audio] No working instance, using iframe');
+      await playYouTubeIframe(t);
+    }
     updateMediaSession(t);
   }
   highlightCurrent();
 }
 
-function hideYT() {
-  document.getElementById('ytWrap').style.display = 'none';
-}
-
-// ⬇️ YouTube প্লে করার নতুন ফাংশন (fallback সহ)
-async function playYouTube(videoId, fallbackArtwork) {
+async function playYouTubeIframe(t) {
   document.getElementById('ytWrap').style.display = 'block';
-
-  // 💡 FIX: file:// প্রোটোকলে origin প্যারামিটার পাঠানো হবে না
-  const isFileProtocol = location.protocol === 'file:';
-  const originParam = isFileProtocol ? '' : `&origin=${encodeURIComponent(location.origin)}`;
-
+  document.getElementById('npArt').style.display = 'none';
   await ensureYTAPI();
 
   if (!ytPlayer) {
     ytPlayer = new YT.Player('ytPlayer', {
       width: '100%', height: '100%',
-      videoId: videoId,
-      playerVars: {
-        autoplay: 1, controls: 1, playsinline: 1,
-        modestbranding: 1, rel: 0
-      },
+      videoId: t.id,
+      playerVars: { autoplay: 1, controls: 1, playsinline: 1, modestbranding: 1, rel: 0 },
       events: {
         onReady: e => {
           ytReady = true;
@@ -527,30 +617,26 @@ async function playYouTube(videoId, fallbackArtwork) {
           else if (e.data === 0) playNext();
         },
         onError: e => {
-          console.warn('YT error code:', e.data);
-          // 💡 FIX: YouTube ব্যর্থ হলে ভাঙা আইকনের বদলে fallback
-          if (fallbackArtwork) {
-            document.getElementById('npArt').src = fallbackArtwork;
-            document.getElementById('npArt').style.display = 'block';
-          }
-          hideYT(); // YouTube প্লেয়ার লুকিয়ে ফেলো
-          setTimeout(playNext, 800); // পরের গানে চলে যাও
+          console.warn('YT error:', e.data);
+          hideYT();
+          setTimeout(playNext, 500);
         }
       }
     });
   } else {
     try {
-      ytPlayer.loadVideoById(videoId);
+      ytPlayer.loadVideoById(t.id);
       ytPlayer.playVideo();
-    } catch(e) {
-      console.warn('YT load failed:', e);
-      if (fallbackArtwork) {
-        document.getElementById('npArt').src = fallbackArtwork;
-        document.getElementById('npArt').style.display = 'block';
-      }
-      hideYT();
-    }
+    } catch(e) { console.warn(e); }
   }
+  currentPlayMode = 'yt-iframe';
+  document.getElementById('npTitle').textContent = t.title;
+  showBgIndicator('foreground', 'শুধু ফোরগ্রাউন্ড');
+}
+
+function hideYT() {
+  document.getElementById('ytWrap').style.display = 'none';
+  if (ytPlayer && ytReady) { try { ytPlayer.stopVideo(); } catch(e) {} }
 }
 
 function ensureYTAPI() {
@@ -571,11 +657,35 @@ function ensureYTAPI() {
   });
 }
 
+/* ============================================================
+   ইন্ডিকেটর দেখাও
+============================================================ */
+let bgIndicatorTimer = null;
+function showBgIndicator(mode, text) {
+  const el = document.getElementById('bgIndicator');
+  const icon = document.getElementById('bgIcon');
+  const txt = document.getElementById('bgText');
+  el.classList.remove('fg');
+  if (mode === 'foreground') {
+    el.classList.add('fg');
+    icon.textContent = '⚠️';
+  } else {
+    icon.textContent = '🔊';
+  }
+  txt.textContent = text;
+  el.classList.add('show');
+  clearTimeout(bgIndicatorTimer);
+  bgIndicatorTimer = setTimeout(() => el.classList.remove('show'), 3000);
+}
+
+/* ============================================================
+   কন্ট্রোল
+============================================================ */
 function togglePlay() {
   const t = queue[currentIndex];
   if (!t) { if (queue.length) playAt(0); return; }
 
-  if (t.source === 'youtube' && ytPlayer && ytReady) {
+  if (currentPlayMode === 'yt-iframe' && ytPlayer && ytReady) {
     try {
       const state = ytPlayer.getPlayerState();
       if (state === 1) ytPlayer.pauseVideo();
@@ -589,8 +699,9 @@ function togglePlay() {
 function playNext() { if (queue.length) playAt((currentIndex + 1) % queue.length); }
 function playPrev() {
   if (!queue.length) return;
-  const t = queue[currentIndex];
-  if (t && t.source === 'audius' && audio.currentTime > 3) { audio.currentTime = 0; return; }
+  if ((currentPlayMode === 'audius' || currentPlayMode === 'yt-audio') && audio.currentTime > 3) {
+    audio.currentTime = 0; return;
+  }
   playAt((currentIndex - 1 + queue.length) % queue.length);
 }
 
@@ -601,7 +712,7 @@ function highlightCurrent() {
 }
 
 /* ============================================================
-   Media Session
+   Media Session — অডিও স্ট্রিমের জন্য
 ============================================================ */
 function updateMediaSession(track) {
   if (!('mediaSession' in navigator)) return;
@@ -628,17 +739,25 @@ function updateMediaSession(track) {
 ============================================================ */
 audio.addEventListener('play', () => setPlayIcon(true));
 audio.addEventListener('pause', () => {
-  const t = queue[currentIndex];
-  if (t && t.source === 'audius') setPlayIcon(false);
+  if (currentPlayMode === 'audius' || currentPlayMode === 'yt-audio') setPlayIcon(false);
 });
 audio.addEventListener('ended', () => {
-  const t = queue[currentIndex];
-  if (t && t.source === 'audius') playNext();
+  if (currentPlayMode === 'audius' || currentPlayMode === 'yt-audio') playNext();
+});
+audio.addEventListener('error', (e) => {
+  console.warn('Audio error:', e);
+  // অডিও স্ট্রিম ফেল করলে iframe-এ ফলব্যাক
+  if (currentPlayMode === 'yt-audio') {
+    const t = queue[currentIndex];
+    if (t && t.source === 'youtube') {
+      console.log('YT audio stream failed, falling back to iframe');
+      playYouTubeIframe(t);
+    }
+  }
 });
 
 audio.addEventListener('timeupdate', () => {
-  const t = queue[currentIndex];
-  if (!t || t.source !== 'audius') return;
+  if (currentPlayMode !== 'audius' && currentPlayMode !== 'yt-audio') return;
   const cur = audio.currentTime || 0;
   const dur = audio.duration || 0;
   document.getElementById('curTime').textContent = fmtTime(cur);
@@ -652,8 +771,7 @@ audio.addEventListener('timeupdate', () => {
 });
 
 setInterval(() => {
-  const t = queue[currentIndex];
-  if (!t || t.source !== 'youtube' || !ytPlayer || !ytReady) return;
+  if (currentPlayMode !== 'yt-iframe' || !ytPlayer || !ytReady) return;
   try {
     const cur = ytPlayer.getCurrentTime() || 0;
     const dur = ytPlayer.getDuration() || 0;
@@ -670,12 +788,9 @@ function setPlayIcon(playing) {
 }
 
 function seek(e) {
-  const t = queue[currentIndex];
-  if (!t) return;
   const rect = document.getElementById('progressBar').getBoundingClientRect();
   const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-
-  if (t.source === 'youtube' && ytPlayer && ytReady) {
+  if (currentPlayMode === 'yt-iframe' && ytPlayer && ytReady) {
     try {
       const dur = ytPlayer.getDuration() || 0;
       if (dur) ytPlayer.seekTo(pct * dur, true);
