@@ -92,7 +92,6 @@
   .track-dur { color: var(--text-dim); font-size: 0.85rem; text-align: right; }
   .badge { display: inline-block; font-size: 0.65rem; padding: 2px 6px; border-radius: 3px; margin-left: 6px; vertical-align: middle; font-weight: 700; }
   .badge.yt { background: var(--yt); color: #fff; }
-  .badge.bg { background: #0288d1; color: #fff; }
   .badge.audius { background: var(--accent); color: #000; }
   .empty, .loading { text-align: center; color: var(--text-dim); padding: 3rem 1rem; font-size: 0.95rem; }
 
@@ -135,7 +134,6 @@
   .overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 99; }
   .overlay.show { display: block; }
 
-  /* ব্যাকগ্রাউন্ড মোড ইন্ডিকেটর */
   .bg-indicator {
     position: fixed; top: 12px; right: 12px;
     background: #0288d1; color: #fff;
@@ -179,7 +177,6 @@
 
 <div class="overlay" id="overlay" onclick="closeSidebar()"></div>
 
-<!-- ব্যাকগ্রাউন্ড ইন্ডিকেটর -->
 <div class="bg-indicator" id="bgIndicator">
   <span id="bgIcon">🔊</span>
   <span id="bgText">ব্যাকগ্রাউন্ড মোড</span>
@@ -266,15 +263,20 @@ const AUDIUS_API = 'https://discoveryprovider.audius.co/v1';
 const YOUTUBE_KEY = 'AIzaSyBYMKWcyx0YYvLlJQj2MBKeWQBH-oqxYg4';
 const HEADERS = { 'x-api-key': AUDIUS_KEY };
 
-// ইনভিডিয়াস ইনস্ট্যান্স — অডিও স্ট্রিম প্রক্সির জন্য
-// একটা কাজ না করলে পরেরটা চেষ্টা করবে
-const INVIDIOUS_INSTANCES = [
-  'https://inv.nadeko.net',
-  'https://invidious.nerdvpn.de',
-  'https://invidious.f5.si',
-  'https://yewtu.be',
-  'https://iv.melmac.space',
-  'https://invidious.privacyredirect.com'
+// 🔑 Piped API ইনস্ট্যান্স — YouTube অডিও স্ট্রিমের জন্য
+const PIPED_INSTANCES = [
+  'https://pipedapi.kavin.rocks',
+  'https://pipedapi.adminforge.de',
+  'https://api.piped.yt',
+  'https://pipedapi.leptons.xyz',
+  'https://pipedapi.nosebs.ru',
+  'https://pipedapi.drgns.space',
+  'https://pipedapi.owo.si',
+  'https://pipedapi.ducks.party',
+  'https://piped-api.codespace.cz',
+  'https://pipedapi.reallyaweso.me',
+  'https://api.piped.private.coffee',
+  'https://pipedapi.darkness.services'
 ];
 
 /* ============================================================
@@ -293,7 +295,7 @@ const audio = document.getElementById('audio');
 audio.volume = lastVolume;
 
 /* ============================================================
-   মোবাইল UI ডিটেকশন (Desktop site চালু থাকলেও কাজ করবে)
+   মোবাইল UI ডিটেকশন
 ============================================================ */
 function applyMobileUI() {
   const ua = navigator.userAgent || '';
@@ -347,7 +349,7 @@ try {
 } catch(e) {}
 
 /* ============================================================
-   API কল
+   Audius API
 ============================================================ */
 async function audiusGet(path) {
   const url = `${AUDIUS_API}${path}${path.includes('?') ? '&' : '?'}app_name=${APP_NAME}`;
@@ -369,6 +371,9 @@ async function searchAudius(q) {
   } catch (e) { return []; }
 }
 
+/* ============================================================
+   YouTube Search (Google API)
+============================================================ */
 async function searchYouTube(q) {
   try {
     const cacheKey = 'yt_' + q.toLowerCase();
@@ -395,45 +400,58 @@ async function searchYouTube(q) {
 }
 
 /* ============================================================
-   🔑 YouTube অডিও স্ট্রিম URL — Invidious দিয়ে
+   🔑 Piped API দিয়ে YouTube অডিও স্ট্রিম URL আনা
    এটাই ব্যাকগ্রাউন্ড প্লেব্যাকের মূল চাবি
 ============================================================ */
 async function getYouTubeAudioUrl(videoId) {
-  // ক্যাশ চেক — একই ভিডিওর জন্য বারবার অনুরোধ না করতে
-  const cacheKey = 'yta_' + videoId;
+  // ক্যাশ — একই ভিডিওর জন্য বারবার অনুরোধ নয়
+  const cacheKey = 'ytp_' + videoId;
   const cached = sessionStorage.getItem(cacheKey);
   if (cached) return cached;
 
-  // প্রতিটি ইনস্ট্যান্স চেষ্টা করি
-  for (const inst of INVIDIOUS_INSTANCES) {
+  for (const inst of PIPED_INSTANCES) {
     try {
-      // itag=140 হলো 128kbps M4A অডিও, local=true দিলে সার্ভার প্রক্সি করে
-      // ফলে ব্রাউজার থেকে সরাসরি স্ট্রিম করা যায়
-      const url = `${inst}/latest_version?id=${videoId}&itag=140&local=true`;
-
-      // HEAD রিকোয়েস্ট দিয়ে দেখি URL কাজ করে কি না
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 6000);
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
 
-      const res = await fetch(url, {
-        method: 'GET',
-        signal: controller.signal,
-        // শুধু হেডার চাই, বডি না
-        headers: { 'Range': 'bytes=0-100' }
+      const res = await fetch(`${inst}/streams/${videoId}`, {
+        signal: controller.signal
       });
       clearTimeout(timeoutId);
 
-      if (res.ok || res.status === 206) {
-        // এই URL কাজ করছে
-        sessionStorage.setItem(cacheKey, url);
-        console.log('[BG Audio] Working instance:', inst);
-        return url;
+      if (!res.ok) {
+        console.log(`[Piped] ${inst} → HTTP ${res.status}`);
+        continue;
+      }
+
+      const data = await res.json();
+      const audioStreams = data.audioStreams || [];
+
+      if (audioStreams.length === 0) {
+        console.log(`[Piped] ${inst} → no audio streams`);
+        continue;
+      }
+
+      // সর্বোচ্চ বিটরেটের অডিও স্ট্রিম বেছে নাও
+      const bestAudio = audioStreams.slice().sort((a, b) => (b.bitrate || 0) - (a.bitrate || 0))[0];
+
+      if (bestAudio && bestAudio.url) {
+        // Piped-এর URL কখনো relative হয়, তখন ইনস্ট্যান্স প্রিফিক্স যোগ করো
+        let streamUrl = bestAudio.url;
+        if (!streamUrl.startsWith('http')) {
+          streamUrl = `${inst}${streamUrl}`;
+        }
+        sessionStorage.setItem(cacheKey, streamUrl);
+        console.log(`[Piped] ✅ Working: ${inst}`);
+        return streamUrl;
       }
     } catch (e) {
-      console.log('[BG Audio] Instance failed:', inst, e.message);
+      console.log(`[Piped] ${inst} → ${e.message}`);
       continue;
     }
   }
+
+  console.log('[Piped] ❌ No working instance found');
   return null;
 }
 
@@ -531,7 +549,7 @@ function showQueue() {
 }
 
 /* ============================================================
-   🎯 প্লেব্যাক — মূল পরিবর্তন এখানে
+   🎯 প্লেব্যাক
 ============================================================ */
 async function playAt(index) {
   if (index < 0 || index >= queue.length) return;
@@ -541,12 +559,12 @@ async function playAt(index) {
   document.getElementById('npTitle').textContent = t.title;
   document.getElementById('npArtist').textContent = t.artist;
 
-  // আগের প্লেব্যাক বন্ধ
+  // আগের প্লেয়ার বন্ধ
   try { audio.pause(); } catch(e) {}
   if (ytPlayer && ytReady) { try { ytPlayer.stopVideo(); } catch(e) {} }
 
   if (t.source === 'audius') {
-    // ===== অডিয়াস =====
+    // ========== অডিয়াস ==========
     hideYT();
     const npArt = document.getElementById('npArt');
     npArt.dataset.fb = '';
@@ -559,14 +577,19 @@ async function playAt(index) {
     updateMediaSession(t);
     showBgIndicator('background', 'ব্যাকগ্রাউন্ড চালু');
   } else {
-    // ===== YouTube =====
-    // প্রথমে চেষ্টা: সরাসরি অডিও স্ট্রিম (ব্যাকগ্রাউন্ড চালু হবে)
-    document.getElementById('npTitle').textContent = t.title + ' (লোড হচ্ছে...)';
+    // ========== YouTube ==========
+    // প্রথমে Piped দিয়ে সরাসরি অডিও URL চেষ্টা করি
+    document.getElementById('npTitle').textContent = t.title + ' ⏳';
 
-    const audioUrl = await getYouTubeAudioUrl(t.id);
+    let audioUrl = null;
+    try {
+      audioUrl = await getYouTubeAudioUrl(t.id);
+    } catch (e) {
+      console.warn('Piped error:', e);
+    }
 
     if (audioUrl) {
-      // ✅ সরাসরি অডিও — ব্যাকগ্রাউন্ডে চলবে!
+      // ✅ সরাসরি অডিও → ব্যাকগ্রাউন্ডে চলবে
       hideYT();
       const npArt = document.getElementById('npArt');
       npArt.dataset.fb = '';
@@ -581,13 +604,12 @@ async function playAt(index) {
         showBgIndicator('background', 'ব্যাকগ্রাউন্ড চালু');
         document.getElementById('npTitle').textContent = t.title;
       } catch (e) {
-        console.warn('YT direct audio failed, falling back to iframe:', e);
-        // ফেল করলে iframe-এ যাই
+        console.warn('Direct audio play failed:', e);
         await playYouTubeIframe(t);
       }
     } else {
-      // ❌ সরাসরি অডিও পাওয়া যায়নি — iframe ফলব্যাক
-      console.log('[BG Audio] No working instance, using iframe');
+      // ❌ অডিও URL পাওয়া যায়নি → IFrame ফলব্যাক
+      console.log('[BG] Falling back to iframe');
       await playYouTubeIframe(t);
     }
     updateMediaSession(t);
@@ -658,7 +680,7 @@ function ensureYTAPI() {
 }
 
 /* ============================================================
-   ইন্ডিকেটর দেখাও
+   ইন্ডিকেটর
 ============================================================ */
 let bgIndicatorTimer = null;
 function showBgIndicator(mode, text) {
@@ -712,7 +734,7 @@ function highlightCurrent() {
 }
 
 /* ============================================================
-   Media Session — অডিও স্ট্রিমের জন্য
+   Media Session
 ============================================================ */
 function updateMediaSession(track) {
   if (!('mediaSession' in navigator)) return;
@@ -750,7 +772,7 @@ audio.addEventListener('error', (e) => {
   if (currentPlayMode === 'yt-audio') {
     const t = queue[currentIndex];
     if (t && t.source === 'youtube') {
-      console.log('YT audio stream failed, falling back to iframe');
+      console.log('Audio stream failed → iframe fallback');
       playYouTubeIframe(t);
     }
   }
