@@ -234,9 +234,16 @@
 
 <script type="module">
     /* ============================================================
-       yt-innertube ইমপোর্ট (CDN থেকে)
+       yt-innertube ইমপোর্ট (CDN)
     ============================================================ */
-    import { getStreamUrlViaInnertube } from 'https://esm.sh/yt-innertube@0.1.0';
+    let getStreamUrlViaInnertube = null;
+    try {
+        const mod = await import('https://esm.sh/yt-innertube@0.1.0');
+        getStreamUrlViaInnertube = mod.getStreamUrlViaInnertube || mod.default?.getStreamUrlViaInnertube;
+        console.log('[yt-innertube] loaded:', !!getStreamUrlViaInnertube);
+    } catch (e) {
+        console.warn('[yt-innertube] load failed:', e.message);
+    }
 
     /* ============================================================
        কনফিগ
@@ -247,17 +254,19 @@
     const YOUTUBE_KEY = 'AIzaSyBYMKWcyx0YYvLlJQj2MBKeWQBH-oqxYg4';
     const HEADERS = { 'x-api-key': AUDIUS_KEY };
 
-    // CORS প্রক্সি — YouTube-এর রেসপন্স বাইপাস করতে
+    // CORS প্রক্সি — YouTube innertube রেসপন্স বাইপাসের জন্য
     const CORS_PROXY = 'https://api.allorigins.win/raw?url=';
 
-    // yt-innertube-এর fetch-কে প্রক্সির মাধ্যমে পাঠাতে override
-    const originalFetch = window.fetch;
+    // fetch override — শুধু youtubei/v1/player অনুরোধ প্রক্সি করে
+    const originalFetch = window.fetch.bind(window);
     window.fetch = function (input, init) {
-        const url = typeof input === 'string' ? input : input.url;
-        if (url.includes('youtubei/v1/player')) {
-            const proxiedUrl = CORS_PROXY + encodeURIComponent(url);
-            return originalFetch(proxiedUrl, init);
-        }
+        try {
+            const url = typeof input === 'string' ? input : (input && input.url);
+            if (url && url.includes('youtubei/v1/player')) {
+                const proxied = CORS_PROXY + encodeURIComponent(url);
+                return originalFetch(proxied, init);
+            }
+        } catch (e) {}
         return originalFetch(input, init);
     };
 
@@ -350,7 +359,7 @@
     }
 
     /* ============================================================
-       YouTube Search (Google API)
+       YouTube Search
     ============================================================ */
     async function searchYouTube(q) {
         try {
@@ -378,25 +387,26 @@
     }
 
     /* ============================================================
-       🔑 yt-innertube দিয়ে YouTube অডিও URL
+       yt-innertube দিয়ে YouTube অডিও URL
     ============================================================ */
     async function getYouTubeAudioUrl(videoId) {
+        if (!getStreamUrlViaInnertube) return null;
         const cacheKey = 'yti_' + videoId;
         const cached = sessionStorage.getItem(cacheKey);
         if (cached) return cached;
 
         try {
-            console.log(`[yt-innertube] Resolving audio for: ${videoId}`);
+            console.log(`[yt-innertube] Resolving: ${videoId}`);
             const url = await getStreamUrlViaInnertube(videoId, 'audio');
             if (url) {
                 sessionStorage.setItem(cacheKey, url);
-                console.log(`[yt-innertube] ✅ Audio URL found`);
+                console.log(`[yt-innertube] ✅ found`);
                 return url;
             }
-            console.log(`[yt-innertube] ❌ No audio stream returned`);
+            console.log(`[yt-innertube] ❌ no url`);
             return null;
         } catch (e) {
-            console.warn(`[yt-innertube] Failed:`, e.message);
+            console.warn(`[yt-innertube] failed:`, e.message);
             return null;
         }
     }
@@ -495,7 +505,7 @@
     }
 
     /* ============================================================
-       🎯 প্লেব্যাক
+       প্লেব্যাক
     ============================================================ */
     async function playAt(index) {
         if (index < 0 || index >= queue.length) return;
@@ -599,9 +609,7 @@
     function seek(e) {
         const rect = document.getElementById('progressBar').getBoundingClientRect();
         const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-        if (audio.duration) {
-            audio.currentTime = pct * audio.duration;
-        }
+        if (audio.duration) audio.currentTime = pct * audio.duration;
     }
 
     function setVolume(e) {
@@ -672,6 +680,28 @@
         if (e.code === 'Space') { e.preventDefault(); togglePlay(); }
         if (e.code === 'ArrowRight' && e.shiftKey) playNext();
         if (e.code === 'ArrowLeft' && e.shiftKey) playPrev();
+    });
+
+    /* ============================================================
+       🔧 FIX: module-এর ফাংশনগুলো window-এ expose করি
+       যাতে HTML-এর onclick/onkeydown হ্যান্ডলার এগুলো খুঁজে পায়
+    ============================================================ */
+    Object.assign(window, {
+        loadTrending,
+        loadFeatured,
+        doSearch,
+        playAt,
+        playNext,
+        playPrev,
+        togglePlay,
+        seek,
+        setVolume,
+        toggleMute,
+        toggleSidebar,
+        closeSidebar,
+        focusSearch,
+        showQueue,
+        setActive
     });
 
     /* শুরু */
