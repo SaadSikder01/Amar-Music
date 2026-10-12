@@ -110,6 +110,8 @@
             flex-shrink: 0;
         }
         .np-art-slot img { width: 100%; height: 100%; object-fit: cover; display: block; position: relative; z-index: 1; }
+        #ytWrap { position: absolute; inset: 0; display: none; z-index: 2; background: #000; }
+        #ytWrap iframe { width: 100% !important; height: 100% !important; display: block; border: 0; }
         .now-playing .np-info { min-width: 0; }
         .now-playing .np-title { font-size: 0.9rem; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .now-playing .np-artist { font-size: 0.75rem; color: var(--text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -202,6 +204,7 @@
     <div class="now-playing">
         <div class="np-art-slot">
             <img id="npArt" alt="">
+            <div id="ytWrap"><div id="ytPlayer"></div></div>
         </div>
         <div class="np-info">
             <div class="np-title" id="npTitle">কিছু প্লে হয়নি</div>
@@ -254,7 +257,6 @@
     const YOUTUBE_KEY = 'AIzaSyBYMKWcyx0YYvLlJQj2MBKeWQBH-oqxYg4';
     const HEADERS = { 'x-api-key': AUDIUS_KEY };
 
-    // CORS প্রক্সি — YouTube innertube রেসপন্স বাইপাসের জন্য
     const CORS_PROXY = 'https://api.allorigins.win/raw?url=';
 
     // fetch override — শুধু youtubei/v1/player অনুরোধ প্রক্সি করে
@@ -277,6 +279,10 @@
     let currentIndex = -1;
     let isMuted = false;
     let lastVolume = 0.8;
+    let currentPlayMode = 'idle'; // 'audius' | 'yt-audio' | 'yt-iframe' | 'idle'
+    let ytPlayer = null;
+    let ytReady = false;
+    let ytScriptLoaded = false;
 
     const audio = document.getElementById('audio');
     audio.volume = lastVolume;
@@ -412,6 +418,70 @@
     }
 
     /* ============================================================
+       YouTube IFrame প্লেয়ার (ফলব্যাক)
+    ============================================================ */
+    function ensureYTAPI() {
+        if (window.YT && window.YT.Player) return Promise.resolve();
+        if (ytScriptLoaded) {
+            return new Promise(resolve => {
+                const t = setInterval(() => {
+                    if (window.YT && window.YT.Player) { clearInterval(t); resolve(); }
+                }, 100);
+            });
+        }
+        return new Promise(resolve => {
+            ytScriptLoaded = true;
+            const tag = document.createElement('script');
+            tag.src = 'https://www.youtube.com/iframe_api';
+            window.onYouTubeIframeAPIReady = resolve;
+            document.head.appendChild(tag);
+        });
+    }
+
+    async function playYouTubeIframe(t) {
+        document.getElementById('ytWrap').style.display = 'block';
+        document.getElementById('npArt').style.display = 'none';
+        await ensureYTAPI();
+
+        if (!ytPlayer) {
+            ytPlayer = new YT.Player('ytPlayer', {
+                width: '100%', height: '100%',
+                videoId: t.id,
+                playerVars: { autoplay: 1, controls: 1, playsinline: 1, modestbranding: 1, rel: 0 },
+                events: {
+                    onReady: e => {
+                        ytReady = true;
+                        try { e.target.setVolume(isMuted ? 0 : lastVolume * 100); } catch(x){}
+                        e.target.playVideo();
+                    },
+                    onStateChange: e => {
+                        if (e.data === 1) setPlayIcon(true);
+                        else if (e.data === 2) setPlayIcon(false);
+                        else if (e.data === 0) playNext();
+                    },
+                    onError: e => {
+                        console.warn('YT error:', e.data);
+                        hideYT();
+                        setTimeout(playNext, 500);
+                    }
+                }
+            });
+        } else {
+            try {
+                ytPlayer.loadVideoById(t.id);
+                ytPlayer.playVideo();
+            } catch(e) { console.warn(e); }
+        }
+        currentPlayMode = 'yt-iframe';
+        document.getElementById('npTitle').textContent = t.title;
+    }
+
+    function hideYT() {
+        document.getElementById('ytWrap').style.display = 'none';
+        if (ytPlayer && ytReady) { try { ytPlayer.stopVideo(); } catch(e) {} }
+    }
+
+    /* ============================================================
        ট্রেন্ডিং / ফিচার্ড
     ============================================================ */
     async function loadTrending() {
@@ -505,7 +575,7 @@
     }
 
     /* ============================================================
-       প্লেব্যাক
+       🎯 প্লেব্যাক (yt-innertube → IFrame ফলব্যাক)
     ============================================================ */
     async function playAt(index) {
         if (index < 0 || index >= queue.length) return;
@@ -515,9 +585,14 @@
         document.getElementById('npTitle').textContent = t.title;
         document.getElementById('npArtist').textContent = t.artist;
 
+        // সব প্লেয়ার বন্ধ
         try { audio.pause(); } catch(e) {}
+        try { audio.removeAttribute('src'); audio.load(); } catch(e) {}
+        if (ytPlayer && ytReady) { try { ytPlayer.stopVideo(); } catch(e) {} }
 
         if (t.source === 'audius') {
+            // ========== অডিয়াস ==========
+            hideYT();
             const npArt = document.getElementById('npArt');
             npArt.dataset.fb = '';
             npArt.src = t.artwork || PLACEHOLDER;
@@ -525,8 +600,10 @@
 
             audio.src = `${AUDIUS_API}/tracks/${t.id}/stream?app_name=${APP_NAME}`;
             try { await audio.play(); } catch (e) { console.warn('Audius play failed:', e); }
+            currentPlayMode = 'audius';
             updateMediaSession(t);
         } else {
+            // ========== YouTube ==========
             document.getElementById('npTitle').textContent = t.title + ' ⏳';
 
             let audioUrl = null;
@@ -537,6 +614,8 @@
             }
 
             if (audioUrl) {
+                // ✅ yt-innertube সফল — সরাসরি অডিও → ব্যাকগ্রাউন্ডে চলবে
+                hideYT();
                 const npArt = document.getElementById('npArt');
                 npArt.dataset.fb = '';
                 npArt.src = t.artwork || PLACEHOLDER;
@@ -545,13 +624,20 @@
                 audio.src = audioUrl;
                 try {
                     await audio.play();
+                    currentPlayMode = 'yt-audio';
                     document.getElementById('npTitle').textContent = t.title;
+                    updateMediaSession(t);
                 } catch (e) {
-                    console.warn('Direct audio play failed:', e);
-                    document.getElementById('npTitle').textContent = t.title + ' (বাজানো যায়নি)';
+                    console.warn('Direct audio play failed, falling back to iframe:', e);
+                    // অডিও প্লে করতে পারলেও IFrame চেষ্টা
+                    await playYouTubeIframe(t);
+                    updateMediaSession(t);
                 }
             } else {
-                document.getElementById('npTitle').textContent = t.title + ' (পাওয়া যায়নি)';
+                // ❌ yt-innertube ব্যর্থ — IFrame ফলব্যাক (ভিডিও প্লে হবে, ফোরগ্রাউন্ড)
+                console.log('[Fallback] Using YouTube IFrame player');
+                await playYouTubeIframe(t);
+                updateMediaSession(t);
             }
         }
         highlightCurrent();
@@ -584,10 +670,25 @@
        অডিও ইভেন্ট
     ============================================================ */
     audio.addEventListener('play', () => setPlayIcon(true));
-    audio.addEventListener('pause', () => setPlayIcon(false));
-    audio.addEventListener('ended', () => playNext());
+    audio.addEventListener('pause', () => {
+        if (currentPlayMode === 'audius' || currentPlayMode === 'yt-audio') setPlayIcon(false);
+    });
+    audio.addEventListener('ended', () => {
+        if (currentPlayMode === 'audius' || currentPlayMode === 'yt-audio') playNext();
+    });
+    audio.addEventListener('error', () => {
+        // yt-audio স্ট্রিম ফেল করলে IFrame-এ চলে যাই
+        if (currentPlayMode === 'yt-audio') {
+            const t = queue[currentIndex];
+            if (t && t.source === 'youtube') {
+                console.log('[Audio error] → IFrame fallback');
+                playYouTubeIframe(t);
+            }
+        }
+    });
 
     audio.addEventListener('timeupdate', () => {
+        if (currentPlayMode !== 'audius' && currentPlayMode !== 'yt-audio') return;
         const cur = audio.currentTime || 0;
         const dur = audio.duration || 0;
         document.getElementById('curTime').textContent = fmtTime(cur);
@@ -600,6 +701,18 @@
         }
     });
 
+    // IFrame-এর সময় পোলিং
+    setInterval(() => {
+        if (currentPlayMode !== 'yt-iframe' || !ytPlayer || !ytReady) return;
+        try {
+            const cur = ytPlayer.getCurrentTime() || 0;
+            const dur = ytPlayer.getDuration() || 0;
+            document.getElementById('curTime').textContent = fmtTime(cur);
+            document.getElementById('durTime').textContent = dur ? fmtTime(dur) : '0:00';
+            document.getElementById('progressFill').style.width = (dur ? (cur/dur)*100 : 0) + '%';
+        } catch(e) {}
+    }, 1000);
+
     function setPlayIcon(playing) {
         document.getElementById('playIcon').innerHTML = playing
             ? '<path d="M6 5h4v14H6zm8 0h4v14h-4z"/>'
@@ -609,13 +722,21 @@
     function seek(e) {
         const rect = document.getElementById('progressBar').getBoundingClientRect();
         const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-        if (audio.duration) audio.currentTime = pct * audio.duration;
+        if (currentPlayMode === 'yt-iframe' && ytPlayer && ytReady) {
+            try {
+                const dur = ytPlayer.getDuration() || 0;
+                if (dur) ytPlayer.seekTo(pct * dur, true);
+            } catch(e) {}
+        } else if (audio.duration) {
+            audio.currentTime = pct * audio.duration;
+        }
     }
 
     function setVolume(e) {
         const rect = document.getElementById('volumeBar').getBoundingClientRect();
         const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
         audio.volume = pct;
+        if (ytPlayer && ytReady) { try { ytPlayer.setVolume(pct * 100); } catch(e){} }
         lastVolume = pct; isMuted = false;
         document.getElementById('volumeFill').style.width = (pct * 100) + '%';
     }
@@ -625,9 +746,11 @@
         if (isMuted) {
             lastVolume = audio.volume;
             audio.volume = 0;
+            if (ytPlayer && ytReady) { try { ytPlayer.setVolume(0); } catch(e){} }
             document.getElementById('volumeFill').style.width = '0%';
         } else {
             audio.volume = lastVolume || 0.8;
+            if (ytPlayer && ytReady) { try { ytPlayer.setVolume((lastVolume || 0.8) * 100); } catch(e){} }
             document.getElementById('volumeFill').style.width = ((lastVolume || 0.8) * 100) + '%';
         }
     }
@@ -662,12 +785,24 @@
     function playNext() { if (queue.length) playAt((currentIndex + 1) % queue.length); }
     function playPrev() {
         if (!queue.length) return;
-        if (audio.currentTime > 3) { audio.currentTime = 0; return; }
+        if ((currentPlayMode === 'audius' || currentPlayMode === 'yt-audio') && audio.currentTime > 3) {
+            audio.currentTime = 0; return;
+        }
         playAt((currentIndex - 1 + queue.length) % queue.length);
     }
     function togglePlay() {
-        if (!audio.src) { if (queue.length) playAt(0); return; }
-        if (audio.paused) audio.play(); else audio.pause();
+        const t = queue[currentIndex];
+        if (!t) { if (queue.length) playAt(0); return; }
+
+        if (currentPlayMode === 'yt-iframe' && ytPlayer && ytReady) {
+            try {
+                const state = ytPlayer.getPlayerState();
+                if (state === 1) ytPlayer.pauseVideo();
+                else ytPlayer.playVideo();
+            } catch(e) {}
+        } else {
+            if (audio.paused) audio.play(); else audio.pause();
+        }
     }
     function highlightCurrent() {
         document.querySelectorAll('.track-row').forEach(el => el.classList.remove('playing'));
@@ -683,8 +818,7 @@
     });
 
     /* ============================================================
-       🔧 FIX: module-এর ফাংশনগুলো window-এ expose করি
-       যাতে HTML-এর onclick/onkeydown হ্যান্ডলার এগুলো খুঁজে পায়
+       🔧 FIX: module-এর ফাংশনগুলো window-এ expose
     ============================================================ */
     Object.assign(window, {
         loadTrending,
